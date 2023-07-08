@@ -1,0 +1,253 @@
+<script crossorigin src="https://unpkg.com/react@17/umd/react.development.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+<script src = "https://unpkg.com/@mui/material@5.13.7/umd/material-ui.development.js"></script>
+
+<script src="https://www.gstatic.com/charts/loader.js"></script>
+
+<script type="text/babel">
+    const DRF_ADDRESS = "http://localhost:8000"
+</script>
+
+<script type="text/babel">
+
+    // app 의 API 호출
+    const APP_NAME = "tmm" 
+
+    function app_calculateSpectrum(layers, setSpectrumFunc) {
+        axios      
+        .post(DRF_ADDRESS + "/"+APP_NAME+"/calculate/spectrum/",layers)
+        .then((response) => {
+            setSpectrumFunc(response.data)
+        })
+        .catch((error) => {
+            console.log(error)
+        }
+        );
+    }
+    function app_calculateCieAxisValue(spectrum, setCieAxisFunc) {
+        axios      
+        .post(DRF_ADDRESS + "/"+APP_NAME+"/cie/axis/value/",spectrum)
+        .then((response) => {
+            setCieAxisFunc(response.data)
+        })
+        .catch((error) => {
+            console.log(error)
+        }
+        );
+    }
+
+
+</script>
+
+<script>
+    google.charts.load('current', {packages: ['corechart']});    
+    function drawSpectrumChart(data) {
+	 	var chartData = google.visualization.arrayToDataTable(data);
+        var options = {
+            title: 'Spectrum',
+            titleTextStyle: {fontSize:16},
+            //series: {1:{targetAxisIndex:1}}, //세로 축을 2축화
+            width: 550, height: 340, //폭, 높이
+            chartArea: {width:460, height:240}, //차트 영역
+            legend: {position:'in', alignment:'start'} //범례
+        };
+        var charDiv = document.getElementById('spectrum_chart');
+	 	var chart = new google.visualization.LineChart(charDiv);
+	 	chart.draw(chartData, options);
+    }
+
+</script>
+
+<script type="text/babel">
+    class TestPage extends React.Component {
+        render() {
+            const tableStyle = {
+                width: '100%',
+                textAlign: 'center',
+                borderCollapse: 'collapse',
+                tableLayout: 'fixed'
+            }
+            const tdStyle = {
+                textAlign: 'center',
+                borderCollapse: 'collapse',
+                overflowWrap: 'break-word'
+            }
+
+            return (
+            <div>
+                <dd>--------- [0-------------- 
+                    <input type="hidden" id="layer0" name="layer0" 
+                        maxlength="50" size="3" value="-1000" required>
+                        </input> 1000] nm</dd>
+
+                {Object.entries(this.state.layers).map(([key, value]) => {
+                    const [t, n, k] = value
+                    return (
+                    <dd>
+                        Layer {key} : 
+                            <input type="range" min="0" max="1000" step="5"  id={"layer "+key} name={"layer "+key}
+                                onChange = {(e)=>{
+                                    this.setState({layers:{...this.state.layers, [key]:[e.target.value, n, k]}},
+                                    () => {this.setSpectrum()} 
+                                    )}}
+                                maxlength="50" size="3" value={t} required></input> {t} nm
+                        n : 
+                            <input type="text" id={"nvalue"+key} name={"nvalue"+key} maxlength="50"  size="3" 
+                                onChange = {(e)=>{this.setState({layers:{...this.state.layers, [key]:[t, e.target.value, k]}},
+                                    () => {this.setSpectrum()} 
+                                )}}
+                                value={n} required></input>
+                        k : 
+                            <input type="text" id={"kvalue"+key} name={"kvalue"+key} maxlength="50"  size="3" 
+                                onChange = {(e)=>{this.setState({layers:{...this.state.layers, [key]:[t, n, e.target.value]}},
+                                    () => {this.setSpectrum()} 
+                                )}}
+                                value={k} required></input>
+                            <button 
+                                onClick={() => {
+                                    const {[key]:value, ...rest} = this.state.layers
+                                    this.setState({layers:rest})
+                                    this.setSpectrum()}}
+                                > - </button>
+
+                    </dd>
+                    )
+                }) }
+                <dd>
+                <button onClick={() => {                    
+                    this.setState({layers:{...this.state.layers, [Number(Object.keys(this.state.layers).at(-1))+1]:[100, 1.47, 0]}},
+                        () => {this.setSpectrum()}) }}
+                    >add layer</button>
+                {(Object.keys(this.state.layers).length>1)?
+                <button onClick={() => {                    
+                    const [t, n, k] = Object.values(this.state.layers).at(-2)
+                    this.setState({layers:{...this.state.layers, [Number(Object.keys(this.state.layers).at(-1))+1]:[t, n, k]}},
+                        () => {this.setSpectrum()} )                    
+                }}
+                    > Periodic </button>:<div></div>}</dd>
+
+                <div id="spectrum_chart"></div>
+                <canvas id="color_RT" width="250"></canvas><p/>
+                <canvas id="cie_diagram" width="300" height="300"></canvas>
+
+
+                {JSON.stringify(this.state.cieAxisValue)}
+
+            </div>
+            );    
+        }
+
+        constructor(props) {
+        super(props);
+        this.state = {
+            layers : {0:[0,1,0]},
+            spectrum : [],
+            cieAxisValue : {R:[0.33,0.33],T:[0.33,0.33]}
+        };
+
+        }
+
+        componentDidMount() {
+            
+        }
+        
+        setSpectrum() {            
+            const layers = this.state.layers
+            const setSpectrumFunc = (s) => {this.setState({spectrum:s},
+                ()=>{
+                    drawSpectrumChart(this.state.spectrum)
+                    this.getCieAxisValue()
+                    this.drawColor()
+                    this.drawCieDiagram()
+                })}
+            app_calculateSpectrum(layers, setSpectrumFunc)
+        }
+
+        getCieAxisValue(){
+            const setCieAxisFunc = (v) => {this.setState({cieAxisValue:v})}
+            app_calculateCieAxisValue(this.state.spectrum, setCieAxisFunc)
+        }
+
+
+        drawColor() { 
+            var canvas = document.getElementById("color_RT"); 
+            
+            const color256 = 255;
+            const [r_red, r_green] = this.state.cieAxisValue.R
+            const r_blue = 1-r_red-r_green
+            const [t_red, t_green] = this.state.cieAxisValue.T
+            const t_blue = 1-t_red-t_green
+            
+            if (canvas.getContext) { 
+                var ctx = canvas.getContext("2d"); 
+                
+                ctx.fillStyle = "rgb("
+                    +String(Math.floor(color256*r_red))+","
+                    +String(Math.floor(color256*r_green))+","
+                    +String(Math.floor(color256*r_blue))+")"; 
+                ctx.fillRect (10, 10, 100, 100); 
+
+                ctx.fillStyle = "rgb("
+                    +String(Math.floor(color256*t_red))+","
+                    +String(Math.floor(color256*t_green))+","
+                    +String(Math.floor(color256*t_blue))+")"; 
+                ctx.fillRect (150, 10, 100, 100); 
+            }
+        }
+        drawCieDiagram(){
+            var canvas = document.getElementById("cie_diagram"); 
+            if (canvas.getContext) { 
+                var ctx = canvas.getContext("2d"); 
+
+            const color256 = 255;
+            const [r_red, r_green] = this.state.cieAxisValue.R
+            const r_blue = 1-r_red-r_green
+            const [t_red, t_green] = this.state.cieAxisValue.T
+            const t_blue = 1-t_red-t_green
+
+            let red, green, blue;
+            for(red=0; red<250; red+=10){
+                for(green=0; green<250; green+=10){
+                    for(blue=0; blue<250; blue+=10){
+
+                        let ciex = red/(red+green+blue);
+                        let ciey = green/(red+green+blue);
+                        ctx.fillStyle = "rgb("+String(red)+","+String(green)+","+String(blue)+")"; 
+                        ctx.fillRect (270*ciex, 270-270*ciey, 20, 20); 
+                }}}
+            
+            }
+
+            const [cieXr, cieYr] = this.state.cieAxisValue.R
+            const [cieXt, cieYt] = this.state.cieAxisValue.T
+
+            ctx.fillStyle = "rgb(0,0,0)"; 
+            ctx.fillRect(270*cieXr, 270-270*cieYr, 10, 10); 
+
+            ctx.fillStyle = "rgb(150,150,150)"; 
+            ctx.fillRect(270*cieXt, 270-270*cieYt, 10, 10);
+        }      
+
+    }
+
+
+
+    ReactDOM.render(<TestPage />, document.getElementById('root'));
+</script>
+
+
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>TMM-simulation</title>
+  </head>
+  <body>
+    <h1>TMM-simulation</h1>
+    <div id='root'></div>
+  </body>
+</html>
+
+
