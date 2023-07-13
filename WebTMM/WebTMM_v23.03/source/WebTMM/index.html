@@ -1,0 +1,183 @@
+<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.6.9/angular.min.js"></script>
+<script src = "https://unpkg.com/@mui/material@5.13.7/umd/material-ui.development.js"></script>
+<script src="https://www.gstatic.com/charts/loader.js"></script>
+
+<script>
+    const DRF_ADDRESS = "http://localhost:8000"
+    const APP_NAME = "tmm" 
+
+    
+    google.charts.load('current', {packages: ['corechart']});    
+    function drawSpectrumChart(data) {
+	 	var chartData = google.visualization.arrayToDataTable(data);
+        var options = {
+            title: 'Spectrum',
+            titleTextStyle: {fontSize:16},
+            //series: {1:{targetAxisIndex:1}}, //세로 축을 2축화
+            width: 550, height: 340, //폭, 높이
+            chartArea: {width:460, height:240}, //차트 영역
+            legend: {position:'in', alignment:'start'} //범례
+        };
+        var charDiv = document.getElementById('spectrum_chart');
+	 	var chart = new google.visualization.LineChart(charDiv);
+	 	chart.draw(chartData, options);
+    }
+
+</script>
+
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>TMM-simulation</title>
+  </head>
+  <body>
+    <h1>TMM-simulation</h1>
+    <div ng-app="newApp" ng-controller="newCtrl">
+        <table>
+        <tr>
+            <td align="center">Layer</td>
+            <td align="center">Thickness</td>
+            <td align="center">n</td>
+            <td align="center">k</td>
+        </tr>
+            
+        <tr ng-repeat="value in layers">
+            <td>
+             {{$index}} :
+             </td>
+             <td>
+            <input type="range" min="0" max="1000" step="5"  id="layer "{{$index}} name="layer "{{$index}}
+                ng-model="value[0]" ng-change="getSpectrum()" required> {{value[0]}}nm
+            </td>
+            <td>            
+
+            <input type="text" id="nvalue"{{$index}} name="nvalue"{{$index}} maxlength="8"  size="3" 
+                ng-model="value[1]" required></input>
+            </td>
+            <td>            
+
+            <input type="text" id="kvalue"{{$index}} name="kvalue"{{$index}} maxlength="8"  size="3" 
+            ng-model="value[2]" required></input>
+            </td>
+            <td>            
+                <button ng-click="delLayer($index)"> - </button>
+                <button ng-click="addLayer($index+1)"> + </button>
+            </td>
+        </tr>
+        </table>
+        <div id="spectrum_chart"></div>
+        <canvas id="color_RT" width="250"></canvas><p/>
+        <canvas id="cie_diagram" width="300" height="300"></canvas>
+
+    </div>
+    <script>
+        var app = angular.module('newApp', []);
+        app.controller('newCtrl', function($scope, $http) {
+            $scope.name = 'World';
+            $scope.layers = [[0,1,0],[100,1.47,0.001],[100,2.47,0.001],[100,1.47,0.001]];
+            $scope.spectrum = [];
+            $scope.cieAxisValue = {R:[0,0], T:[0,0]};
+
+            $scope.addLayer = function(i){
+                $scope.layers.splice(i,0,[0,1.47,0]);
+            }
+
+            $scope.delLayer = function(i){
+                console.log(i)
+                $scope.layers.splice(i,1)
+            }
+
+            $scope.getSpectrum = function() {            
+                $http.post(DRF_ADDRESS + "/"+APP_NAME+"/calculate/spectrum/",$scope.layers)
+                .then((response) => {
+                    $scope.spectrum = response.data
+                    drawSpectrumChart($scope.spectrum)
+                    $scope.getCieAxisValue()
+                    $scope.drawColor()
+                    $scope.drawCieDiagram()
+                })
+                .catch((error) => {
+                    console.log(error)
+                }
+                );
+            }
+
+            $scope.getCieAxisValue = function() {                
+                $http.post(DRF_ADDRESS + "/"+APP_NAME+"/cie/axis/value/",$scope.spectrum)
+                .then((response) => {
+                    $scope.cieAxisValue = response.data
+                })
+                .catch((error) => {
+                    console.log(error)
+                }
+                );
+            }
+
+            $scope.drawColor = function() { 
+                var canvas = document.getElementById("color_RT"); 
+                
+                const color256 = 255;
+                const [r_red, r_green] = $scope.cieAxisValue.R
+                const r_blue = 1-r_red-r_green
+                const [t_red, t_green] = $scope.cieAxisValue.T
+                const t_blue = 1-t_red-t_green
+                
+                if (canvas.getContext) { 
+                    var ctx = canvas.getContext("2d"); 
+                    
+                    ctx.fillStyle = "rgb("
+                        +String(Math.floor(color256*r_red))+","
+                        +String(Math.floor(color256*r_green))+","
+                        +String(Math.floor(color256*r_blue))+")"; 
+                    ctx.fillRect (10, 10, 100, 100); 
+
+                    ctx.fillStyle = "rgb("
+                        +String(Math.floor(color256*t_red))+","
+                        +String(Math.floor(color256*t_green))+","
+                        +String(Math.floor(color256*t_blue))+")"; 
+                    ctx.fillRect (150, 10, 100, 100); 
+                }
+            }
+
+            $scope.drawCieDiagram = function() {
+                var canvas = document.getElementById("cie_diagram"); 
+                if (canvas.getContext) { 
+                    var ctx = canvas.getContext("2d"); 
+
+                const color256 = 255;
+                const [r_red, r_green] = $scope.cieAxisValue.R
+                const r_blue = 1-r_red-r_green
+                const [t_red, t_green] = $scope.cieAxisValue.T
+                const t_blue = 1-t_red-t_green
+
+                let red, green, blue;
+                for(red=0; red<250; red+=10){
+                    for(green=0; green<250; green+=10){
+                        for(blue=0; blue<250; blue+=10){
+
+                            let ciex = red/(red+green+blue);
+                            let ciey = green/(red+green+blue);
+                            ctx.fillStyle = "rgb("+String(red)+","+String(green)+","+String(blue)+")"; 
+                            ctx.fillRect (270*ciex, 270-270*ciey, 20, 20); 
+                    }}}
+                
+                }
+
+                const [cieXr, cieYr] = $scope.cieAxisValue.R
+                const [cieXt, cieYt] = $scope.cieAxisValue.T
+
+                ctx.fillStyle = "rgb(0,0,0)"; 
+                ctx.fillRect(270*cieXr, 270-270*cieYr, 10, 10); 
+
+                ctx.fillStyle = "rgb(150,150,150)"; 
+                ctx.fillRect(270*cieXt, 270-270*cieYt, 10, 10);
+            }      
+        });
+    </script>
+
+    <div id='root'></div>
+  </body>
+</html>
+
+

@@ -1,0 +1,2 @@
+1. 이 폴더에 get-pip.py 가 들어 있는지 확인 ( https://bootstrap.pypa.io/get-pip.py )
+2. python310._pth (해당 버전 파일) 에서 import site 
