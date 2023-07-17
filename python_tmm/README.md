@@ -1,11 +1,16 @@
 # python_tmm
 PySide6 기반 GUI TMM 계산기
 
+![pysideTMM](https://github.com/active0831/comphy/assets/91447903/65c673cc-125a-44d4-8f30-05afffdbeb3a)
+
 # 설치 
  - 설치 및 실행 : setup.bat
  - 설치 후 실행만 : run.bat
 
 # 업데이트 내역
+  - v23.02
+    - pyside6_boilerplate_v23.06 적용, 모듈화 ( 2023.7.17. )
+
   - v23.01
     - 최초 게시
     - 기존 pyside_generic_v23.04 에
