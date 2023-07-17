@@ -6,6 +6,9 @@ PySide6 기반 GUI TMM 계산기
  - 설치 후 실행만 : run.bat
 
 # 업데이트 내역
+  - v23.02
+    - pyside6_boilerplate_v23.06 적용, 모듈화 ( 2023.7.17. )
+
   - v23.01
     - 최초 게시
     - 기존 pyside_generic_v23.04 에
