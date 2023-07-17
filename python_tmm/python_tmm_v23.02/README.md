@@ -1,6 +1,8 @@
 # python_tmm
 PySide6 기반 GUI TMM 계산기
 
+![pysideTMM](https://github.com/active0831/comphy/assets/91447903/65c673cc-125a-44d4-8f30-05afffdbeb3a)
+
 # 설치 
  - 설치 및 실행 : setup.bat
  - 설치 후 실행만 : run.bat
