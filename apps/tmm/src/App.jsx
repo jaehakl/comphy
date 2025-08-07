@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { Button, InputNumber, Panel, Stack, Divider } from "rsuite";
 import "rsuite/dist/rsuite.min.css";
 import Plot from "react-plotly.js";
+import { spectrum } from './tmm-core';
 
 /** ------------------ Complex helpers ------------------ */
 function c(re, im = 0) { return { re, im }; }
@@ -94,7 +95,7 @@ export default function App() {
     return arr;
   }, [lambdaMin, lambdaMax, points]);
 
-  const { R, T } = useMemo(() => tmmComplex(layers, lambdaArr), [layers, lambdaArr]);
+  const { λs, R, T } = spectrum(layers);   // 배열 그대로 Plotly
 
   const plotData = useMemo(() => ([
     { x: Array.from(lambdaArr), y: Array.from(R), name: "R", type: "scatter" },
