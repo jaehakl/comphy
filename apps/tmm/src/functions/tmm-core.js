@@ -56,6 +56,7 @@ const mmul = (A, B) => {
 };
 
 export function spectrum(layersIn, λ0, λ1, points) {
+  
   const air = { d: 0, n: 1, k: 0 };
 
   /* PHP : top-air + user-layers + bottom-air */
