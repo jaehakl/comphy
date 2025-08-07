@@ -30,8 +30,8 @@
 ## 🚀 Quick start
 ```bash
 # 1. clone
-git clone https://github.com/<you>/tmm-js.git
-cd tmm-js
+git clone https://github.com/jaehakl/comphy.git
+cd comphy
 
 # 2. install (pnpm recommended, npm works)
 pnpm install
